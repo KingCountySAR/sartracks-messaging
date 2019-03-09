@@ -9,12 +9,17 @@ namespace SarData.Messaging.Api
 {
   public class Startup
   {
-    public Startup(IConfiguration configuration)
+    public Startup(IConfiguration configuration, IHostingEnvironment env)
     {
       Configuration = configuration;
+      appRoot = env.ContentRootPath;
+      environment = env.EnvironmentName;
     }
 
     public IConfiguration Configuration { get; }
+
+    private readonly string appRoot;
+    private string environment;
 
     // This method gets called by the runtime. Use this method to add services to the container.
     public void ConfigureServices(IServiceCollection services)
@@ -24,7 +29,11 @@ namespace SarData.Messaging.Api
         {
           options.Authority = Configuration["auth:authority"];
           options.Audience = Configuration["auth:authority"].TrimEnd('/') + "/resources";
+          options.RequireHttpsMetadata = environment != EnvironmentName.Development;
         });
+
+      services.SetupSmtp(Configuration, appRoot);
+      services.SetupSms(Configuration);
 
       services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
     }
