@@ -7,17 +7,21 @@ using Twilio.Rest.Api.V2010.Account;
 
 namespace SarData.Messaging.Api.Service
 {
-  public class SmsService : NullSmsService
+  public class SmsService : ISmsService
   {
     private readonly string fromNumber;
+    private readonly ILogger<ISmsService> logger;
 
-    public SmsService(IConfiguration config, ILogger<ISmsService> logger) : base(logger)
+    public SmsService(IConfiguration config, ILogger<ISmsService> logger)
     {
       fromNumber = config["sms:twilio:from"];
+      this.logger = logger;
     }
 
-    public override async Task SendMessage(string to, string message)
+    public async Task SendMessage(string to, string message)
     {
+      logger.LogInformation("Sending SMS to {0}", to);
+
       to = Regex.Replace(to, "[^\\d]", "");
       if (to.Length != 10) throw new ArgumentException("unrecognized mobile number");
 

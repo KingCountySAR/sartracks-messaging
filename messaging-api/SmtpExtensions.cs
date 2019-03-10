@@ -3,12 +3,13 @@ using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace SarData.Messaging.Api
 {
   public static class SmtpExtensions
   {
-    public static void SetupSmtp(this IServiceCollection services, IConfiguration Configuration, string contentRoot)
+    public static void SetupSmtp(this IServiceCollection services, IConfiguration Configuration, string contentRoot, ILogger logger)
     {
       services.AddScoped(svcs =>
       {
@@ -16,20 +17,33 @@ namespace SarData.Messaging.Api
 
         string host = config.GetValue<string>("email:smtp:host");
 
-        return string.IsNullOrWhiteSpace(host) ? GetLocalClient(contentRoot) : GetSmtpClient(Configuration);
+        if (string.IsNullOrWhiteSpace(host))
+        {
+          logger.LogInformation($"SMTP - No configuration found. Writing emails to {contentRoot}");
+          return GetLocalClient(contentRoot);
+        }
+        else
+        {
+          return GetSmtpClient(Configuration, logger);
+        }
       });
     }
 
-    private static SmtpClient GetSmtpClient(IConfiguration config)
+    private static SmtpClient GetSmtpClient(IConfiguration config, ILogger logger)
     {
+      var host = config.GetValue<string>("email:smtp:host");
+      var port = config.GetValue<int>("email:smtp:port");
+      var username = config.GetValue<string>("email:smtp:username");
+      logger.LogInformation($"SMTP - Will send email from {config.GetValue<string>("email:smtp:from")} to {host}:{port} as {username}");
+
       return new SmtpClient
       {
-        Host = config.GetValue<string>("email:smtp:host"),
-        Port = config.GetValue<int>("email:smtp:port"),
+        Host = host,
+        Port = port,
         EnableSsl = true,
         UseDefaultCredentials = false,
         Credentials = new NetworkCredential(
-                          config.GetValue<string>("email:smtp:username"),
+                          username,
                           config.GetValue<string>("email:smtp:password")
                         )
       };
@@ -37,10 +51,13 @@ namespace SarData.Messaging.Api
 
     private static SmtpClient GetLocalClient(string contentRoot)
     {
+      var directory = Path.Combine(contentRoot, "logs", "emails");
+      Directory.CreateDirectory(directory);
+
       return new SmtpClient
       {
         DeliveryMethod = SmtpDeliveryMethod.SpecifiedPickupDirectory,
-        PickupDirectoryLocation = Path.Combine(contentRoot, "emails")
+        PickupDirectoryLocation = directory
       };
     }
   }

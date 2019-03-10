@@ -4,14 +4,16 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace SarData.Messaging.Api
 {
   public class Startup
   {
-    public Startup(IConfiguration configuration, IHostingEnvironment env)
+    public Startup(IConfiguration configuration, IHostingEnvironment env, ILogger<Startup> logger)
     {
       Configuration = configuration;
+      this.logger = logger;
       appRoot = env.ContentRootPath;
       environment = env.EnvironmentName;
     }
@@ -19,7 +21,8 @@ namespace SarData.Messaging.Api
     public IConfiguration Configuration { get; }
 
     private readonly string appRoot;
-    private string environment;
+    private readonly ILogger<Startup> logger;
+    private readonly string environment;
 
     // This method gets called by the runtime. Use this method to add services to the container.
     public void ConfigureServices(IServiceCollection services)
@@ -27,13 +30,15 @@ namespace SarData.Messaging.Api
       services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
-          options.Authority = Configuration["auth:authority"];
-          options.Audience = Configuration["auth:authority"].TrimEnd('/') + "/resources";
+          string authority = Configuration["auth:authority"].TrimEnd('/');
+          logger.LogInformation("JWT Authority {0}", authority);
+          options.Authority = authority;
+          options.Audience = $"{authority}/resources";
           options.RequireHttpsMetadata = environment != EnvironmentName.Development;
         });
 
-      services.SetupSmtp(Configuration, appRoot);
-      services.SetupSms(Configuration);
+      services.SetupSmtp(Configuration, appRoot, logger);
+      services.SetupSms(Configuration, logger);
 
       services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
     }

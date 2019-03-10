@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using SarData.Logging;
 
 namespace SarData.Messaging.Api
 {
@@ -15,14 +16,21 @@ namespace SarData.Messaging.Api
     public static IWebHost BuildWebHost(string[] args)
     {
       var builder = WebHost.CreateDefaultBuilder(args);
-      Console.WriteLine("Process ID: " + System.Diagnostics.Process.GetCurrentProcess().Id);
+      var insightsKey = Environment.GetEnvironmentVariable("APPINSIGHTS_INSTRUMENTATIONKEY");
+      if (!string.IsNullOrWhiteSpace(insightsKey))
+      {
+        builder = builder.UseApplicationInsights(insightsKey);
+      }
+
       return builder
         .UseStartup<Startup>()
-        .ConfigureAppConfiguration(config =>
+        .ConfigureAppConfiguration((context, config) =>
         {
-          config.AddJsonFile("appsettings.json", true, false)
-                .AddJsonFile("appsettings.local.json", true, false)
-                .AddEnvironmentVariables();
+          config.AddConfigFiles(context.HostingEnvironment.EnvironmentName);
+        })
+        .ConfigureLogging(logBuilder =>
+        {
+          logBuilder.AddSarDataLogging();
         })
         .Build();
     }
