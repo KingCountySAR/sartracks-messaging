@@ -10,6 +10,7 @@ namespace SarData.Messaging.Api
   {
     public static void Main(string[] args)
     {
+      Console.WriteLine("Messaging API process " + System.Diagnostics.Process.GetCurrentProcess().Id);
       BuildWebHost(args).Run();
     }
 

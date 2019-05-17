@@ -30,7 +30,7 @@ namespace SarData.Messaging.Api.Controllers
         return BadRequest(new { Error = "Invalid request" });
       }
 
-      await smtp.SendMailAsync(new MailMessage(fromAddress, request.To, request.Subject, request.Message));
+      await smtp.SendMailAsync(new MailMessage(fromAddress, request.To, request.Subject, request.Message) { IsBodyHtml = true });
       return Ok(new { Data = new object { } });
     }
   }
