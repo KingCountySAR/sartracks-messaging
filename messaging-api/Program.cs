@@ -23,15 +23,18 @@ namespace SarData.Messaging.Api
         builder = builder.UseApplicationInsights(insightsKey);
       }
 
+      string contentRoot = "";
+
       return builder
         .UseStartup<Startup>()
         .ConfigureAppConfiguration((context, config) =>
         {
           config.AddConfigFiles(context.HostingEnvironment.EnvironmentName);
+          contentRoot = context.HostingEnvironment.ContentRootPath;
         })
         .ConfigureLogging(logBuilder =>
         {
-          logBuilder.AddSarDataLogging();
+          logBuilder.AddSarDataLogging(contentRoot);
         })
         .Build();
     }
