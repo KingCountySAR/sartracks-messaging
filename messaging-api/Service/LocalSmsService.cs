@@ -11,7 +11,7 @@ namespace SarData.Messaging.Api.Service
     private readonly ILogger<ISmsService> logger;
     private readonly string smsFile;
 
-    public LocalSmsService(IHostingEnvironment env, ILogger<ISmsService> logger)
+    public LocalSmsService(IWebHostEnvironment env, ILogger<ISmsService> logger)
     {
       var directory = Path.Combine(env.ContentRootPath, "logs");
       Directory.CreateDirectory(directory);

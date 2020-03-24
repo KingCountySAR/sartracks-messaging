@@ -2,7 +2,7 @@ obj/
 .vs/
 bin/
 *.user
-
+log-*.txt
 .leu
 appsettings.local.json
 logs/

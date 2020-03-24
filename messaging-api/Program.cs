@@ -17,11 +17,6 @@ namespace SarData.Messaging.Api
     public static IWebHost BuildWebHost(string[] args)
     {
       var builder = WebHost.CreateDefaultBuilder(args);
-      var insightsKey = Environment.GetEnvironmentVariable("APPINSIGHTS_INSTRUMENTATIONKEY");
-      if (!string.IsNullOrWhiteSpace(insightsKey))
-      {
-        builder = builder.UseApplicationInsights(insightsKey);
-      }
 
       string contentRoot = "";
 
