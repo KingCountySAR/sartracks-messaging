@@ -45,7 +45,7 @@ steps:
 - task: AzureRmWebAppDeployment@4
   inputs:
     ConnectionType: 'AzureRM'
-    azureSubscription: 'Microsoft Azure Sponsorship(d09a61a0-4b5d-46d4-b30d-22e549a48392)'
+    azureSubscription: '$(deploy_subscription)'
     appType: 'webApp'
-    WebAppName: 'kcsara-messaging'
+    WebAppName: '$(deploy_app)'
     packageForLinux: '$(build.artifactStagingDirectory)/messaging-api.zip'
