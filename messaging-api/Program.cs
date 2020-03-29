@@ -14,24 +14,17 @@ namespace SarData.Messaging.Api
       BuildWebHost(args).Run();
     }
 
-    public static IWebHost BuildWebHost(string[] args)
-    {
-      var builder = WebHost.CreateDefaultBuilder(args);
-
-      string contentRoot = "";
-
-      return builder
+    public static IWebHost BuildWebHost(string[] args) =>
+      WebHost.CreateDefaultBuilder(args)
         .UseStartup<Startup>()
         .ConfigureAppConfiguration((context, config) =>
         {
           config.AddConfigFiles(context.HostingEnvironment.EnvironmentName);
-          contentRoot = context.HostingEnvironment.ContentRootPath;
         })
-        .ConfigureLogging(logBuilder =>
+        .ConfigureLogging((context, logBuilder) =>
         {
-          logBuilder.AddSarDataLogging(contentRoot);
+          logBuilder.AddSarDataLogging(context.Configuration["local_files"] ?? context.HostingEnvironment.ContentRootPath, "messaging");
         })
         .Build();
-    }
   }
 }

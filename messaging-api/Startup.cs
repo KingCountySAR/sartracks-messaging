@@ -9,10 +9,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using Microsoft.IdentityModel.Logging;
+using SarData.Common.Apis.Health;
+using SarData.Messaging.Api.Health;
 using System;
 using System.Linq;
 using System.Net.Mime;
+using System.Text.Json;
 
 namespace SarData.Messaging.Api
 {
@@ -35,14 +38,13 @@ namespace SarData.Messaging.Api
     // This method gets called by the runtime. Use this method to add services to the container.
     public void ConfigureServices(IServiceCollection services)
     {
-      services.AddHealthChecks();
-
       var insightsKey = Environment.GetEnvironmentVariable("APPINSIGHTS_INSTRUMENTATIONKEY");
       if (!string.IsNullOrWhiteSpace(insightsKey))
       {
         services.AddApplicationInsightsTelemetry(insightsKey);
       }
-      
+
+      IdentityModelEventSource.ShowPII = (environment == Environments.Development);
       services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
@@ -50,11 +52,15 @@ namespace SarData.Messaging.Api
           logger.LogInformation("JWT Authority {0}", authority);
           options.Authority = authority;
           options.Audience = $"{authority}/resources";
+          options.TokenValidationParameters.ValidIssuer = authority;
           options.RequireHttpsMetadata = environment != Environments.Development;
         });
-
+      
       services.SetupSmtp(Configuration, appRoot, logger);
       services.SetupSms(Configuration, logger);
+
+      services.AddHealthChecks()
+        .Add(new HealthCheckRegistration("sms", new TwilioHealthCheck(), HealthStatus.Degraded, new[] { "sms", "3rd-party" }));
 
       services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
     }
@@ -66,12 +72,21 @@ namespace SarData.Messaging.Api
       {
         ResponseWriter = async (context, report) =>
         {
-          var result = JsonConvert.SerializeObject(
-              new
+          var result = JsonSerializer.Serialize(
+              new HealthResponse
               {
-                status = report.Status.ToString(),
-                errors = report.Entries.Select(e => new { key = e.Key, value = Enum.GetName(typeof(HealthStatus), e.Value.Status) })
-              });
+                Status = report.Status,
+                Checks = report.Entries.Select(e => {
+                  HealthStatus innerStatus = e.Value.Status;
+                  if (e.Value.Data.TryGetValue("_result", out object statusObj))
+                  {
+                    innerStatus = (HealthStatus)statusObj;
+                  }
+
+                  return new HealthResponse.InnerCheck { Key = e.Key, Status = innerStatus };
+                })
+              },
+              new JsonSerializerOptions().Setup());
           context.Response.ContentType = MediaTypeNames.Application.Json;
           await context.Response.WriteAsync(result);
         }
@@ -87,12 +102,13 @@ namespace SarData.Messaging.Api
         app.UseHsts();
         app.UseHttpsRedirection();
       }
-      app.UseAuthentication();
-      app.UseRouting();
-      app.UseEndpoints(endpoints =>
-      {
-        endpoints.MapControllers();
-      });
+      app.UseRouting()
+         .UseAuthentication()
+         .UseAuthorization()
+         .UseEndpoints(endpoints =>
+            {
+              endpoints.MapControllers();
+            });
     }
   }
 }
