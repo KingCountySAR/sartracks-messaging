@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,12 +9,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
-using SarData.Common.Apis.Health;
 using SarData.Messaging.Api.Health;
-using System;
-using System.Linq;
-using System.Net.Mime;
-using System.Text.Json;
+using SarData.Server.Apis.Health;
 
 namespace SarData.Messaging.Api
 {
@@ -68,29 +63,7 @@ namespace SarData.Messaging.Api
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
-      app.UseHealthChecks("/_health", new HealthCheckOptions
-      {
-        ResponseWriter = async (context, report) =>
-        {
-          var result = JsonSerializer.Serialize(
-              new HealthResponse
-              {
-                Status = report.Status,
-                Checks = report.Entries.Select(e => {
-                  HealthStatus innerStatus = e.Value.Status;
-                  if (e.Value.Data.TryGetValue("_result", out object statusObj))
-                  {
-                    innerStatus = (HealthStatus)statusObj;
-                  }
-
-                  return new HealthResponse.InnerCheck { Key = e.Key, Status = innerStatus };
-                })
-              },
-              new JsonSerializerOptions().Setup());
-          context.Response.ContentType = MediaTypeNames.Application.Json;
-          await context.Response.WriteAsync(result);
-        }
-      });
+      app.UseSarHealthChecks<Startup>();
 
       if (env.IsDevelopment())
       {
@@ -106,9 +79,9 @@ namespace SarData.Messaging.Api
          .UseAuthentication()
          .UseAuthorization()
          .UseEndpoints(endpoints =>
-            {
-              endpoints.MapControllers();
-            });
+         {
+           endpoints.MapControllers();
+         });
     }
   }
 }
