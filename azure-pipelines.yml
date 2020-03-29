@@ -28,7 +28,7 @@ steps:
 
 - script: dir $(Build.SourcesDirectory)
 
-- powershell: '"`"messaging`":`"$(git --git-dir messaging/.git rev-parse HEAD)`", `"common`":`"$(git --git-dir common/.git rev-parse HEAD)`"" > messaging/messaging-api/build_info.json'
+- powershell: '"{`"messaging`":`"$(git --git-dir messaging/.git rev-parse HEAD)`", `"common`":`"$(git --git-dir common/.git rev-parse HEAD)`"}" > messaging/messaging-api/build_info.json'
   displayName: "Emit build number"
   workingDirectory: '$(Build.SourcesDirectory)'
   failOnStderr: true
