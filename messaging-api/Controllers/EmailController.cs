@@ -1,4 +1,6 @@
-﻿using System.Net.Mail;
+﻿using System;
+using System.IO;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,7 +32,20 @@ namespace SarData.Messaging.Api.Controllers
         return BadRequest(new { Error = "Invalid request" });
       }
 
-      await smtp.SendMailAsync(new MailMessage(fromAddress, request.To, request.Subject, request.Message) { IsBodyHtml = true });
+      var message = new MailMessage(fromAddress, request.To, request.Subject, request.Message) { IsBodyHtml = true };
+      if (request.Attachments != null)
+      {
+        foreach (var attachment in request.Attachments)
+        {
+          message.Attachments.Add(new Attachment(new MemoryStream(Convert.FromBase64String(attachment.Base64)), attachment.FileName, attachment.MimeType));
+        }
+      }
+      await smtp.SendMailAsync(message);
+
+      foreach (var forClosing in message.Attachments)
+      {
+        forClosing.ContentStream.Dispose();
+      }
       return Ok(new { Data = new object { } });
     }
   }
